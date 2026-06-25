@@ -138,16 +138,14 @@ export function NominateTab({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Nominate an expert</CardTitle>
+          <CardTitle className="text-xl">Nominate your expert</CardTitle>
           <CardDescription>
-            Pick a discipline and name one person who is better at it than you.
-            Your vote — and every vote that flows to you — passes on to them.
+            Pick a discipline and name one person you personally know that is more competent at it than you.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-3 items-end">
             <div className="space-y-2 relative flex-1" ref={disciplineDropdownRef}>
-              <Label>Discipline</Label>
               <div className="relative">
                 <Input
                   placeholder="Search or add a discipline"
@@ -218,7 +216,6 @@ export function NominateTab({
             </div>
 
             <div className="space-y-2 relative flex-1" ref={nomineeDropdownRef}>
-              <Label>Nominee</Label>
               <div className="relative">
                 <Input
                   placeholder="Search or add a person"
