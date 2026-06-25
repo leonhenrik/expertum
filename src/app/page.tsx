@@ -5,6 +5,7 @@ import { CurrentUserProvider } from "@/components/current-user";
 import { UserProfileHeader } from "@/components/user-profile-header";
 import { NominateTab } from "@/components/nominate-tab";
 import { VisualizeTab } from "@/components/visualize-tab";
+import { IntelligenceTab } from "@/components/intelligence-tab";
 import { getDisciplines, getNominations, getUsers } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,7 @@ export default async function Home() {
               <TabsList>
                 <TabsTrigger value="nominate" className="w-24">Nominate</TabsTrigger>
                 <TabsTrigger value="visualize" className="w-24">Visualize</TabsTrigger>
+                <TabsTrigger value="intelligence" className="w-24">Intelligence</TabsTrigger>
               </TabsList>
               <UserProfileHeader users={users} />
             </div>
@@ -46,6 +48,9 @@ export default async function Home() {
           </TabsContent>
           <TabsContent value="visualize" className="pt-2">
             <VisualizeTab disciplines={disciplines} users={users} />
+          </TabsContent>
+          <TabsContent value="intelligence" className="pt-2">
+            <IntelligenceTab disciplines={disciplines} users={users} />
           </TabsContent>
         </Tabs>
       </main>

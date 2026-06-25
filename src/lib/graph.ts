@@ -25,10 +25,35 @@ import type {
  * Using set-based reachability keeps the computation finite and correct even if
  * users form a nomination cycle.
  */
+/**
+ * Depth-limited BFS score. maxDepth=0 means unlimited.
+ */
+function scoreWithDepth(
+  target: string,
+  incoming: Map<string, string[]>,
+  maxDepth: number
+): number {
+  const seen = new Set<string>([target]);
+  // queue entries: [nodeId, depth]
+  const queue: [string, number][] = [[target, 0]];
+  while (queue.length > 0) {
+    const [current, depth] = queue.shift()!;
+    if (maxDepth > 0 && depth >= maxDepth) continue;
+    for (const nominator of incoming.get(current) ?? []) {
+      if (!seen.has(nominator)) {
+        seen.add(nominator);
+        queue.push([nominator, depth + 1]);
+      }
+    }
+  }
+  return seen.size;
+}
+
 export function buildDisciplineGraph(
   disciplineId: string,
   users: User[],
-  nominations: Nomination[]
+  nominations: Nomination[],
+  maxDepth = 0
 ): DisciplineGraph {
   const relevant = nominations.filter((n) => n.disciplineId === disciplineId);
 
@@ -47,23 +72,7 @@ export function buildDisciplineGraph(
     incoming.get(n.nomineeId)!.push(n.nominatorId);
   }
 
-  // score(X) = number of distinct users that can reach X via nomination edges,
-  // counting X itself. Computed by reverse traversal with a visited set so that
-  // cycles are counted at most once.
-  const score = (target: string): number => {
-    const seen = new Set<string>([target]);
-    const stack = [target];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      for (const nominator of incoming.get(current) ?? []) {
-        if (!seen.has(nominator)) {
-          seen.add(nominator);
-          stack.push(nominator);
-        }
-      }
-    }
-    return seen.size;
-  };
+  const score = (target: string) => scoreWithDepth(target, incoming, maxDepth);
 
   const userById = new Map(users.map((u) => [u.id, u]));
 
@@ -93,7 +102,8 @@ export function buildDisciplineGraph(
 export function buildMultiDisciplineGraph(
   disciplineIds: string[],
   users: User[],
-  nominations: Nomination[]
+  nominations: Nomination[],
+  maxDepth = 0
 ): DisciplineGraph {
   // If no specific disciplines requested, include all
   const relevant =
@@ -115,21 +125,7 @@ export function buildMultiDisciplineGraph(
     incoming.get(n.nomineeId)!.push(n.nominatorId);
   }
 
-  // score(X) = number of distinct users that can reach X via nomination edges
-  const score = (target: string): number => {
-    const seen = new Set<string>([target]);
-    const stack = [target];
-    while (stack.length > 0) {
-      const current = stack.pop()!;
-      for (const nominator of incoming.get(current) ?? []) {
-        if (!seen.has(nominator)) {
-          seen.add(nominator);
-          stack.push(nominator);
-        }
-      }
-    }
-    return seen.size;
-  };
+  const score = (target: string) => scoreWithDepth(target, incoming, maxDepth);
 
   const userById = new Map(users.map((u) => [u.id, u]));
 
