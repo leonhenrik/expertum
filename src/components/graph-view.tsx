@@ -28,12 +28,22 @@ type SimLink = SimulationLinkDatum<SimNode> & {
 const WIDTH = 760;
 const HEIGHT = 520;
 
+type Transform = { x: number; y: number; scale: number };
+
 export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; focusedNodeId?: string | null }) {
   const [nodes, setNodes] = React.useState<SimNode[]>([]);
   const [links, setLinks] = React.useState<SimLink[]>([]);
-  const [transform, setTransform] = React.useState<{ x: number; y: number; scale: number }>({ x: 0, y: 0, scale: 1 });
+  const [transform, setTransform] = React.useState<Transform>({ x: 0, y: 0, scale: 1 });
+  const [animating, setAnimating] = React.useState(false);
   const svgRef = React.useRef<SVGSVGElement>(null);
   const simRef = React.useRef<Simulation<SimNode, SimLink> | null>(null);
+  const dragRef = React.useRef<{ startX: number; startY: number; tx: number; ty: number } | null>(null);
+  const transformRef = React.useRef<Transform>({ x: 0, y: 0, scale: 1 });
+
+  // Keep ref in sync for use inside event handlers
+  React.useEffect(() => {
+    transformRef.current = transform;
+  }, [transform]);
 
   React.useEffect(() => {
     const simNodes: SimNode[] = graph.nodes.map((n) => ({ ...n }));
@@ -69,29 +79,93 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
     };
   }, [graph]);
 
-  // Handle smooth centering on focused node
+  // Pan and zoom event handlers
+  React.useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    const getSVGPoint = (clientX: number, clientY: number) => {
+      const rect = svg.getBoundingClientRect();
+      const scaleX = WIDTH / rect.width;
+      const scaleY = HEIGHT / rect.height;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY,
+      };
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      dragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        tx: transformRef.current.x,
+        ty: transformRef.current.y,
+      };
+      svg.style.cursor = "grabbing";
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      const rect = svg.getBoundingClientRect();
+      const scaleX = WIDTH / rect.width;
+      const scaleY = HEIGHT / rect.height;
+      const dx = (e.clientX - dragRef.current.startX) * scaleX;
+      const dy = (e.clientY - dragRef.current.startY) * scaleY;
+      setTransform((prev) => ({ ...prev, x: dragRef.current!.tx + dx, y: dragRef.current!.ty + dy }));
+    };
+
+    const onMouseUp = () => {
+      dragRef.current = null;
+      svg.style.cursor = "grab";
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const { x: cx, y: cy } = getSVGPoint(e.clientX, e.clientY);
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+      setAnimating(false);
+      setTransform((prev) => {
+        const newScale = Math.max(0.2, Math.min(8, prev.scale * factor));
+        const ratio = newScale / prev.scale;
+        return {
+          x: cx - (cx - prev.x) * ratio,
+          y: cy - (cy - prev.y) * ratio,
+          scale: newScale,
+        };
+      });
+    };
+
+    svg.style.cursor = "grab";
+    svg.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    svg.addEventListener("wheel", onWheel, { passive: false });
+
+    return () => {
+      svg.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      svg.removeEventListener("wheel", onWheel);
+    };
+  }, []);
+
+  // Smooth centering on focused node
   React.useEffect(() => {
     if (!focusedNodeId || nodes.length === 0) {
-      // Reset to full view
+      setAnimating(true);
       setTransform({ x: 0, y: 0, scale: 1 });
       return;
     }
-
     const focusedNode = nodes.find((n) => n.id === focusedNodeId);
-    if (!focusedNode || focusedNode.x == null || focusedNode.y == null) {
-      return;
-    }
-
-    // Calculate zoom to focus on node (2.5x zoom centered on node)
+    if (!focusedNode || focusedNode.x == null || focusedNode.y == null) return;
     const scale = 2.5;
-    const x = focusedNode.x;
-    const y = focusedNode.y;
-    
-    // Calculate pan to center the node in the viewport
-    const panX = WIDTH / 2 - x * scale;
-    const panY = HEIGHT / 2 - y * scale;
-
-    setTransform({ x: panX, y: panY, scale });
+    setAnimating(true);
+    setTransform({
+      x: WIDTH / 2 - focusedNode.x * scale,
+      y: HEIGHT / 2 - focusedNode.y * scale,
+      scale,
+    });
   }, [focusedNodeId, nodes]);
 
   if (graph.nodes.length === 0) {
@@ -104,19 +178,16 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
 
   const maxScore = Math.max(...graph.nodes.map((n) => n.score), 1);
 
+  const groupTransform = `translate(${transform.x}, ${transform.y}) scale(${transform.scale})`;
+
   return (
     <div className="overflow-hidden rounded-lg border bg-card">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-auto w-full"
+        className="h-auto w-full select-none"
         role="img"
         aria-label="Knowledge graph"
-        style={{
-          transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
-          transformOrigin: '0 0',
-          transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1)',
-        }}
       >
         <defs>
           <marker
@@ -124,13 +195,19 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
-            markerWidth="7"
-            markerHeight="7"
+            markerWidth="2.5"
+            markerHeight="2.5"
             orient="auto-start-reverse"
           >
             <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(215 16% 47%)" />
           </marker>
         </defs>
+
+        <g
+          transform={groupTransform}
+          style={animating ? { transition: "transform 500ms cubic-bezier(0.4, 0, 0.2, 1)" } : undefined}
+          onTransitionEnd={() => setAnimating(false)}
+        >
 
         {links.map((link, i) => {
           const s = link.source as SimNode;
@@ -213,6 +290,7 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
             </g>
           );
         })}
+        </g>
       </svg>
 
       <div className="flex flex-wrap items-center gap-4 border-t px-4 py-3 text-xs text-muted-foreground">
