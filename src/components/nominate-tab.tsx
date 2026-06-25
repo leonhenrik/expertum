@@ -276,7 +276,7 @@ export function NominateTab({
                             }}
                           >
                             {u.name}
-                            {!u.registered ? " (nominated)" : ""}
+
                           </button>
                         ))}
                       </div>

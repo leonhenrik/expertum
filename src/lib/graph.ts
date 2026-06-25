@@ -72,7 +72,6 @@ export function buildDisciplineGraph(
     return {
       id,
       name: user?.name ?? "Unknown",
-      registered: user?.registered ?? false,
       score: score(id),
     };
   });
@@ -139,7 +138,6 @@ export function buildMultiDisciplineGraph(
     return {
       id,
       name: user?.name ?? "Unknown",
-      registered: user?.registered ?? false,
       score: score(id),
     };
   });

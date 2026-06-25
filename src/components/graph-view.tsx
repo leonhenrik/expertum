@@ -33,7 +33,6 @@ const PALETTE = [
 type SimNode = SimulationNodeDatum & {
   id: string;
   name: string;
-  registered: boolean;
   score: number;
 };
 
@@ -307,11 +306,8 @@ export function GraphView({ graph, focusedNodeId, disciplines = [] }: { graph: D
               <circle
                 r={r}
                 fill={`hsl(222 47% 30% / ${intensity})`}
-                stroke={
-                  node.registered ? "hsl(222 47% 20%)" : "hsl(215 16% 55%)"
-                }
-                strokeWidth={node.registered ? 2.5 : 1.5}
-                strokeDasharray={node.registered ? undefined : "4 3"}
+                stroke="hsl(222 47% 20%)"
+                strokeWidth={2}
               />
               <text
                 textAnchor="middle"
@@ -338,14 +334,6 @@ export function GraphView({ graph, focusedNodeId, disciplines = [] }: { graph: D
       </svg>
 
       <div className="flex flex-wrap items-center gap-4 border-t px-4 py-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-full border-2 border-[hsl(222_47%_20%)] bg-[hsl(222_47%_30%)]" />
-          Signed-up user
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-full border-2 border-dashed border-[hsl(215_16%_55%)] bg-[hsl(222_47%_30%/0.4)]" />
-          Nominated, not signed up
-        </span>
         {disciplines.length > 1 && disciplines.map((d, i) => (
           <span key={d.id} className="flex items-center gap-1.5">
             <span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />

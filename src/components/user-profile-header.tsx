@@ -1,82 +1,75 @@
 "use client";
 
 import * as React from "react";
-import { LogOut, Plus, UserPlus } from "lucide-react";
+import { LogOut, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCurrentUser } from "@/components/current-user";
-import {
-  signUpExistingUserAction,
-  signUpNewUserAction,
-} from "@/app/actions";
+import { signUpExistingUserAction, signUpNewUserAction } from "@/app/actions";
 import type { User } from "@/lib/types";
 
 export function UserProfileHeader({ users }: { users: User[] }) {
   const { user, setUser } = useCurrentUser();
   const [open, setOpen] = React.useState(false);
-  const [mode, setMode] = React.useState<"existing" | "new">("new");
-  const [newName, setNewName] = React.useState("");
-  const [existingId, setExistingId] = React.useState<string>("");
+  const [search, setSearch] = React.useState("");
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
-  const dropdownRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-  const unregistered = users.filter((u) => !u.registered);
+  const filtered = users.filter((u) =>
+    u.name.toLowerCase().includes(search.toLowerCase())
+  );
+  const exactMatch = users.find(
+    (u) => u.name.toLowerCase() === search.trim().toLowerCase()
+  );
+  const selected = users.find((u) => u.id === selectedId);
 
   React.useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setDropdownOpen(false);
       }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  function handleSubmit() {
+  function handleSignIn() {
     setError(null);
     startTransition(async () => {
-      if (mode === "new") {
-        const res = await signUpNewUserAction(newName);
-        if (res.ok) {
-          setUser(res.data);
-          setNewName("");
-          setOpen(false);
-        } else setError(res.error);
+      if (selectedId) {
+        const res = await signUpExistingUserAction(selectedId);
+        if (res.ok) { setUser(res.data); reset(); }
+        else setError(res.error);
+      } else if (search.trim()) {
+        const res = await signUpNewUserAction(search.trim());
+        if (res.ok) { setUser(res.data); reset(); }
+        else setError(res.error);
       } else {
-        if (!existingId) {
-          setError("Select an existing user.");
-          return;
-        }
-        const res = await signUpExistingUserAction(existingId);
-        if (res.ok) {
-          setUser(res.data);
-          setExistingId("");
-          setOpen(false);
-        } else setError(res.error);
+        setError("Type your name or select an existing person.");
       }
     });
   }
 
+  function reset() {
+    setOpen(false);
+    setDropdownOpen(false);
+    setSearch("");
+    setSelectedId(null);
+    setError(null);
+  }
+
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative" ref={containerRef}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => { setOpen((o) => !o); setDropdownOpen(false); }}
         className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors cursor-pointer"
-        title={user ? `Signed in as ${user.name}` : "Click to sign in"}
+        title={user ? `Signed in as ${user.name}` : "Sign in"}
       >
         {user ? (
           <span className="text-sm font-semibold">{user.name.charAt(0)}</span>
@@ -86,100 +79,83 @@ export function UserProfileHeader({ users }: { users: User[] }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-50 w-72 border border-input bg-background rounded-md shadow-lg p-4 space-y-4">
+        <div className="absolute right-0 top-12 z-50 w-64 border border-input bg-background rounded-md shadow-lg p-4 space-y-3">
           {user ? (
             <>
               <div className="border-b pb-3">
-                <p className="text-sm text-muted-foreground">Signed in as</p>
+                <p className="text-xs text-muted-foreground">Signed in as</p>
                 <p className="font-semibold">{user.name}</p>
               </div>
-              <Button
-                variant="outline"
-                className="w-full gap-2"
-                onClick={() => {
-                  setUser(null);
-                  setOpen(false);
-                }}
-              >
+              <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => { setUser(null); setOpen(false); }}>
                 <LogOut className="h-4 w-4" />
                 Switch user
               </Button>
             </>
           ) : (
             <>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant={mode === "new" ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      setMode("new");
-                      setError(null);
-                    }}
-                  >
-                    New person
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={mode === "existing" ? "default" : "outline"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => {
-                      setMode("existing");
-                      setError(null);
-                    }}
-                    disabled={unregistered.length === 0}
-                  >
-                    Claim account
-                  </Button>
-                </div>
-
-                {mode === "new" ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Your name</Label>
-                    <Input
-                      id="signup-name"
-                      placeholder="e.g. Ada Lovelace"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                      autoFocus
-                    />
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Label>Choose existing person</Label>
-                    <Select value={existingId} onValueChange={setExistingId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a person" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unregistered.map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
+              <div className="relative">
+                <Input
+                  ref={inputRef}
+                  placeholder="Your name…"
+                  value={selected ? selected.name : search}
+                  autoFocus
+                  onChange={(e) => {
+                    setSelectedId(null);
+                    setSearch(e.target.value);
+                    setDropdownOpen(true);
+                    setError(null);
+                  }}
+                  onFocus={() => setDropdownOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); handleSignIn(); }
+                    if (e.key === "Escape") setDropdownOpen(false);
+                  }}
+                />
+                {dropdownOpen && (filtered.length > 0 || (search.trim() && !exactMatch)) && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 border border-input bg-background rounded-md shadow-md overflow-hidden">
+                    {filtered.length > 0 && (
+                      <div className="max-h-40 overflow-y-auto">
+                        {filtered.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-accent"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setSelectedId(u.id);
+                              setSearch("");
+                              setDropdownOpen(false);
+                              setError(null);
+                            }}
+                          >
                             {u.name}
-                          </SelectItem>
+                          </button>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    )}
+                    {search.trim() && !exactMatch && (
+                      <>
+                        {filtered.length > 0 && <div className="border-t border-input" />}
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center gap-2 text-muted-foreground"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => { setSelectedId(null); setDropdownOpen(false); }}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Add "{search.trim()}" as new user
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
-
-                {error && (
-                  <p className="text-xs text-destructive">{error}</p>
-                )}
-
-                <Button
-                  onClick={handleSubmit}
-                  disabled={pending}
-                  className="w-full gap-2"
-                  size="sm"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  {pending ? "Signing up..." : "Sign up"}
-                </Button>
               </div>
+
+              {error && <p className="text-xs text-destructive">{error}</p>}
+
+              <Button onClick={handleSignIn} disabled={pending} size="sm" className="w-full">
+                {pending ? "Signing in…" : "Sign in"}
+              </Button>
             </>
           )}
         </div>

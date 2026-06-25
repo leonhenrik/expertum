@@ -74,26 +74,18 @@ export async function createUser(name: string): Promise<User> {
   const existing = db.users.find(
     (u) => u.name.toLowerCase() === trimmed.toLowerCase()
   );
-  if (existing) {
-    if (!existing.registered) {
-      existing.registered = true;
-      await write(db);
-    }
-    return existing;
-  }
-  const user: User = { id: id("user"), name: trimmed, registered: true };
+  if (existing) return existing;
+  const user: User = { id: id("user"), name: trimmed };
   db.users.push(user);
   await write(db);
   return user;
 }
 
-/** Mark an already-listed (nominated-but-unregistered) user as registered. */
+/** Mark an existing user by id as the signed-in identity (no-op, just returns the user). */
 export async function registerExistingUser(userId: string): Promise<User> {
   const db = await read();
   const user = db.users.find((u) => u.id === userId);
   if (!user) throw new Error("User not found.");
-  user.registered = true;
-  await write(db);
   return user;
 }
 
@@ -106,7 +98,7 @@ export async function getOrCreatePlaceholderUser(name: string): Promise<User> {
     (u) => u.name.toLowerCase() === trimmed.toLowerCase()
   );
   if (existing) return existing;
-  const user: User = { id: id("user"), name: trimmed, registered: false };
+  const user: User = { id: id("user"), name: trimmed };
   db.users.push(user);
   await write(db);
   return user;

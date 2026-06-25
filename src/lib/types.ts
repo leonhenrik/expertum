@@ -1,8 +1,6 @@
 export type User = {
   id: string;
   name: string;
-  /** A signed-up user has registered === true. Nominated-but-not-signed-up users are registered === false. */
-  registered: boolean;
 };
 
 export type Discipline = {
@@ -23,7 +21,6 @@ export type Nomination = {
 export type GraphNode = {
   id: string;
   name: string;
-  registered: boolean;
   /** Total transitive votes flowing into this node (including its own base vote). */
   score: number;
 };

@@ -42,9 +42,8 @@ export function NetworkStats({ graph }: { graph: DisciplineGraph }) {
                   className="h-full rounded transition-all"
                   style={{
                     width: `${(node.score / maxScore) * 100}%`,
-                    background: node.registered
-                      ? `hsl(222 47% ${55 - (node.score / maxScore) * 30}%)`
-                      : `hsl(215 16% 65%)`,
+                    background: `hsl(222 47% ${55 - (node.score / maxScore) * 30}%)`,
+
                   }}
                 />
               </div>
@@ -95,7 +94,7 @@ export function NetworkStats({ graph }: { graph: DisciplineGraph }) {
                 className="flex-1 rounded-t transition-all"
                 style={{
                   height: `${(node.score / maxScore) * 100}%`,
-                  background: node.registered ? "hsl(222 47% 35%)" : "hsl(215 16% 60%)",
+                  background: "hsl(222 47% 35%)",
                   minWidth: 2,
                 }}
               />
