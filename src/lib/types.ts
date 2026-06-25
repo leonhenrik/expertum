@@ -35,6 +35,8 @@ export type GraphEdge = {
   target: string;
   /** Number of votes forwarded along this edge (= nominator's score). */
   weight: number;
+  /** Which discipline this nomination belongs to. */
+  disciplineId: string;
 };
 
 export type DisciplineGraph = {

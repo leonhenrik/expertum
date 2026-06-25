@@ -12,7 +12,23 @@ import {
   type SimulationNodeDatum,
 } from "d3-force";
 
-import type { DisciplineGraph } from "@/lib/types";
+import type { Discipline, DisciplineGraph } from "@/lib/types";
+
+// Distinct hues for up to ~12 disciplines; cycles after that
+const PALETTE = [
+  "hsl(215 70% 50%)",
+  "hsl(340 70% 52%)",
+  "hsl(140 55% 40%)",
+  "hsl(30 80% 52%)",
+  "hsl(270 60% 55%)",
+  "hsl(185 65% 40%)",
+  "hsl(0 70% 52%)",
+  "hsl(55 75% 42%)",
+  "hsl(310 55% 50%)",
+  "hsl(165 60% 38%)",
+  "hsl(20 75% 48%)",
+  "hsl(240 55% 55%)",
+];
 
 type SimNode = SimulationNodeDatum & {
   id: string;
@@ -23,6 +39,7 @@ type SimNode = SimulationNodeDatum & {
 
 type SimLink = SimulationLinkDatum<SimNode> & {
   weight: number;
+  disciplineId: string;
 };
 
 const WIDTH = 760;
@@ -30,7 +47,16 @@ const HEIGHT = 520;
 
 type Transform = { x: number; y: number; scale: number };
 
-export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; focusedNodeId?: string | null }) {
+export function GraphView({ graph, focusedNodeId, disciplines = [] }: { graph: DisciplineGraph; focusedNodeId?: string | null; disciplines?: Discipline[] }) {
+  // Stable color per discipline id
+  const disciplineColor = React.useMemo(() => {
+    const map = new Map<string, string>();
+    disciplines.forEach((d, i) => map.set(d.id, PALETTE[i % PALETTE.length]));
+    return map;
+  }, [disciplines]);
+
+  const edgeColor = (disciplineId: string) =>
+    disciplineColor.get(disciplineId) ?? "hsl(215 16% 47%)";
   const [nodes, setNodes] = React.useState<SimNode[]>([]);
   const [links, setLinks] = React.useState<SimLink[]>([]);
   const [transform, setTransform] = React.useState<Transform>({ x: 0, y: 0, scale: 1 });
@@ -51,6 +77,7 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
       source: e.source,
       target: e.target,
       weight: e.weight,
+      disciplineId: e.disciplineId,
     }));
 
     const simulation = forceSimulation<SimNode>(simNodes)
@@ -106,13 +133,14 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      if (!dragRef.current) return;
+      const drag = dragRef.current;
+      if (!drag) return;
       const rect = svg.getBoundingClientRect();
       const scaleX = WIDTH / rect.width;
       const scaleY = HEIGHT / rect.height;
-      const dx = (e.clientX - dragRef.current.startX) * scaleX;
-      const dy = (e.clientY - dragRef.current.startY) * scaleY;
-      setTransform((prev) => ({ ...prev, x: dragRef.current!.tx + dx, y: dragRef.current!.ty + dy }));
+      const dx = (e.clientX - drag.startX) * scaleX;
+      const dy = (e.clientY - drag.startY) * scaleY;
+      setTransform((prev) => ({ ...prev, x: drag.tx + dx, y: drag.ty + dy }));
     };
 
     const onMouseUp = () => {
@@ -190,8 +218,24 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
         aria-label="Knowledge graph"
       >
         <defs>
+          {/* One arrow marker per discipline, colored to match */}
+          {disciplines.map((d, i) => (
+            <marker
+              key={d.id}
+              id={`arrow-${d.id}`}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="2.5"
+              markerHeight="2.5"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={PALETTE[i % PALETTE.length]} />
+            </marker>
+          ))}
+          {/* Fallback marker when no disciplines passed */}
           <marker
-            id="arrow"
+            id="arrow-"
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
@@ -236,10 +280,10 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
                 y1={s.y}
                 x2={ex}
                 y2={ey}
-                stroke="hsl(215 16% 47%)"
-                strokeOpacity={0.55}
+                stroke={edgeColor(link.disciplineId)}
+                strokeOpacity={0.6}
                 strokeWidth={1 + Math.log2(link.weight + 1) * 2}
-                markerEnd="url(#arrow)"
+                markerEnd={`url(#arrow-${link.disciplineId})`}
               />
               <text
                 x={midX}
@@ -302,6 +346,12 @@ export function GraphView({ graph, focusedNodeId }: { graph: DisciplineGraph; fo
           <span className="inline-block h-3 w-3 rounded-full border-2 border-dashed border-[hsl(215_16%_55%)] bg-[hsl(222_47%_30%/0.4)]" />
           Nominated, not signed up
         </span>
+        {disciplines.length > 1 && disciplines.map((d, i) => (
+          <span key={d.id} className="flex items-center gap-1.5">
+            <span className="inline-block h-2.5 w-5 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />
+            {d.name}
+          </span>
+        ))}
         <span>Number in node = total votes · number on arc = votes forwarded</span>
       </div>
     </div>

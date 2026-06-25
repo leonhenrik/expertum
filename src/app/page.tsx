@@ -19,26 +19,28 @@ export default async function Home() {
   return (
     <CurrentUserProvider>
       <main className="mx-auto max-w-4xl px-4 py-10">
-        <header className="mb-8 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Network className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Expertum</h1>
-              <p className="text-sm text-muted-foreground">
-                Find who to ask.
-              </p>
-            </div>
-          </div>
-          <UserProfileHeader users={users} />
-        </header>
-
         <Tabs defaultValue="nominate">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="nominate">Nominate</TabsTrigger>
-            <TabsTrigger value="visualize">Visualize</TabsTrigger>
-          </TabsList>
+          <header className="mb-8 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Network className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Expertum</h1>
+                <p className="text-sm text-muted-foreground">
+                  Find who to ask.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <TabsList>
+                <TabsTrigger value="nominate" className="w-24">Nominate</TabsTrigger>
+                <TabsTrigger value="visualize" className="w-24">Visualize</TabsTrigger>
+              </TabsList>
+              <UserProfileHeader users={users} />
+            </div>
+          </header>
+
           <TabsContent value="nominate" className="pt-2">
             <NominateTab users={users} disciplines={disciplines} nominations={nominations} />
           </TabsContent>

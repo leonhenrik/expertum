@@ -12,6 +12,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { GraphView } from "@/components/graph-view";
+import { NetworkStats } from "@/components/network-stats";
 import type { Discipline, DisciplineGraph, User } from "@/lib/types";
 import { Check, ChevronDown, X } from "lucide-react";
 
@@ -187,7 +188,8 @@ export function VisualizeTab({ disciplines, users }: { disciplines: Discipline[]
           <p className="text-sm text-muted-foreground">Loading graph…</p>
         )}
 
-        {graph && <GraphView graph={graph} focusedNodeId={focusedUserId} />}
+        {graph && <GraphView graph={graph} focusedNodeId={focusedUserId} disciplines={disciplines} />}
+        {graph && <NetworkStats graph={graph} />}
       </CardContent>
     </Card>
   );

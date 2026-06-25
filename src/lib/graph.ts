@@ -81,6 +81,7 @@ export function buildDisciplineGraph(
     source: n.nominatorId,
     target: n.nomineeId,
     weight: score(n.nominatorId),
+    disciplineId,
   }));
 
   return { disciplineId, nodes, edges };
@@ -147,6 +148,7 @@ export function buildMultiDisciplineGraph(
     source: n.nominatorId,
     target: n.nomineeId,
     weight: score(n.nominatorId),
+    disciplineId: n.disciplineId,
   }));
 
   return { disciplineId: "", nodes, edges };
