@@ -15,14 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUser } from "@/components/current-user";
 import { addDisciplineAction, nominateAction } from "@/app/actions";
-import type { Discipline, User } from "@/lib/types";
+import type { Discipline, Nomination, User } from "@/lib/types";
 
 export function NominateTab({
   users,
   disciplines,
+  nominations,
 }: {
   users: User[];
   disciplines: Discipline[];
+  nominations: Nomination[];
 }) {
   const { user } = useCurrentUser();
   const [disciplineId, setDisciplineId] = React.useState("");
@@ -31,6 +33,28 @@ export function NominateTab({
   const [nomineeId, setNomineeId] = React.useState("");
   const [nomineeSearch, setNomineeSearch] = React.useState("");
   const [nomineeOpen, setNomineeOpen] = React.useState(false);
+
+  // When discipline changes, auto-fill existing nomination if any
+  const existingNomination = React.useMemo(() =>
+    user ? (nominations.find((n) => n.disciplineId === disciplineId && n.nominatorId === user.id) ?? null) : null,
+    [nominations, disciplineId, user]
+  );
+  const isUpdate = !!existingNomination;
+
+  // Auto-fill nominee field when discipline changes
+  React.useEffect(() => {
+    if (existingNomination) {
+      const nominee = users.find((u) => u.id === existingNomination.nomineeId);
+      if (nominee) {
+        setNomineeId(nominee.id);
+        setNomineeSearch(nominee.name);
+        return;
+      }
+    }
+    setNomineeId("");
+    setNomineeSearch("");
+  }, [existingNomination, users]);
+
   const [message, setMessage] = React.useState<{
     type: "ok" | "error";
     text: string;
@@ -140,7 +164,7 @@ export function NominateTab({
         <CardHeader>
           <CardTitle className="text-xl">Nominate your expert</CardTitle>
           <CardDescription>
-            Pick a discipline and name one person you personally know that is more competent at it than you.
+            Pick a discipline and name the person you would approach for a question about it.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -292,7 +316,7 @@ export function NominateTab({
 
             <Button onClick={handleNominate} disabled={pending} className="gap-2">
               <Award className="h-4 w-4" />
-              {pending ? "Saving..." : "Submit"}
+              {pending ? "Saving..." : isUpdate ? "Update" : "Submit"}
             </Button>
           </div>
 

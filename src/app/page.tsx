@@ -5,14 +5,15 @@ import { CurrentUserProvider } from "@/components/current-user";
 import { UserProfileHeader } from "@/components/user-profile-header";
 import { NominateTab } from "@/components/nominate-tab";
 import { VisualizeTab } from "@/components/visualize-tab";
-import { getDisciplines, getUsers } from "@/lib/store";
+import { getDisciplines, getNominations, getUsers } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [users, disciplines] = await Promise.all([
+  const [users, disciplines, nominations] = await Promise.all([
     getUsers(),
     getDisciplines(),
+    getNominations(),
   ]);
 
   return (
@@ -26,8 +27,7 @@ export default async function Home() {
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Expertum</h1>
               <p className="text-sm text-muted-foreground">
-                Nominate who is better than you — and watch expertise centers
-                emerge.
+                Find who to ask.
               </p>
             </div>
           </div>
@@ -40,7 +40,7 @@ export default async function Home() {
             <TabsTrigger value="visualize">Visualize</TabsTrigger>
           </TabsList>
           <TabsContent value="nominate" className="pt-2">
-            <NominateTab users={users} disciplines={disciplines} />
+            <NominateTab users={users} disciplines={disciplines} nominations={nominations} />
           </TabsContent>
           <TabsContent value="visualize" className="pt-2">
             <VisualizeTab disciplines={disciplines} users={users} />
